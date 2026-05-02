@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Disallow paths
+{{DISALLOW_PATHS}}
+
+# Sitemap location
+Sitemap: {{APP_URL}}/sitemap.xml
+
+# Crawl-delay for slower servers
+Crawl-delay: {{CRAWL_DELAY}}
