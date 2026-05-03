@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin;
 
 use App\Models\Departement;
+use App\Models\JenisLaporan;
 use App\Models\PicConfig;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -23,9 +24,10 @@ class PicConfigManager extends Component
     // Modal form
     public ?int $editingId = null;
     public ?int $departemen_id = null;
+    public ?int $jenis_laporan_id = null;
     public array $pics = [];
 
-    public ?int $confirmingDelete = null;
+    public $confirmingDelete = null;
 
     public function updatingSearch(): void
     {
@@ -64,6 +66,7 @@ class PicConfigManager extends Component
     {
         $this->editingId = null;
         $this->departemen_id = null;
+        $this->jenis_laporan_id = null;
         $this->pics = [];
         $this->confirmingDelete = null;
         $this->resetValidation();
@@ -98,6 +101,7 @@ class PicConfigManager extends Component
     {
         return [
             'departemen_id' => ['required', 'exists:departements,id'],
+            'jenis_laporan_id' => ['required', 'exists:jenis_laporans,id'],
             'pics' => ['required', 'array', 'min:1'],
             'pics.*.user_id' => [
                 'required',
@@ -106,14 +110,6 @@ class PicConfigManager extends Component
                     $userIds = array_column($this->pics, 'user_id');
                     if (count($userIds) !== count(array_unique($userIds))) {
                         $fail('User tidak boleh dipilih lebih dari satu kali.');
-                    }
-                },
-                function ($attribute, $value, $fail) {
-                    $existing = PicConfig::where('user_id', $value)
-                        ->where('departemen_id', '!=', $this->departemen_id)
-                        ->exists();
-                    if ($existing) {
-                        $fail('User sudah menjadi PIC di departemen lain.');
                     }
                 },
             ],
@@ -125,6 +121,7 @@ class PicConfigManager extends Component
     {
         return [
             'departemen_id.required' => 'Departemen wajib dipilih.',
+            'jenis_laporan_id.required' => 'Jenis laporan wajib dipilih.',
             'pics.required' => 'Minimal harus ada 1 PIC.',
             'pics.min' => 'Minimal harus ada 1 PIC.',
             'pics.*.user_id.required' => 'User wajib dipilih.',
@@ -138,11 +135,14 @@ class PicConfigManager extends Component
         $this->validate();
 
         DB::transaction(function () {
-            PicConfig::where('departemen_id', $this->departemen_id)->delete();
+            PicConfig::where('departemen_id', $this->departemen_id)
+                ->where('jenis_laporan_id', $this->jenis_laporan_id)
+                ->delete();
 
             foreach ($this->pics as $pic) {
                 PicConfig::create([
                     'departemen_id' => $this->departemen_id,
+                    'jenis_laporan_id' => $this->jenis_laporan_id,
                     'user_id' => $pic['user_id'],
                     'email' => $pic['email'],
                 ]);
@@ -153,14 +153,16 @@ class PicConfigManager extends Component
         $this->closeModal();
     }
 
-    public function edit(int $departemen_id): void
+    public function edit(int $departemen_id, int $jenis_laporan_id): void
     {
         $this->resetForm();
         $this->departemen_id = $departemen_id;
+        $this->jenis_laporan_id = $jenis_laporan_id;
         $this->editingId = $departemen_id;
 
         $configs = PicConfig::with('user')
             ->where('departemen_id', $departemen_id)
+            ->where('jenis_laporan_id', $jenis_laporan_id)
             ->get();
 
         foreach ($configs as $config) {
@@ -177,15 +179,17 @@ class PicConfigManager extends Component
         $this->dispatch('open-modal', 'pic-config-modal');
     }
 
-    public function confirmDelete(int $departemen_id): void
+    public function confirmDelete(int $departemen_id, int $jenis_laporan_id): void
     {
-        $this->confirmingDelete = $departemen_id;
+        $this->confirmingDelete = ['departemen_id' => $departemen_id, 'jenis_laporan_id' => $jenis_laporan_id];
     }
 
     public function delete(): void
     {
         if ($this->confirmingDelete) {
-            PicConfig::where('departemen_id', $this->confirmingDelete)->delete();
+            PicConfig::where('departemen_id', $this->confirmingDelete['departemen_id'])
+                ->where('jenis_laporan_id', $this->confirmingDelete['jenis_laporan_id'])
+                ->delete();
             $this->confirmingDelete = null;
             $this->dispatch('notify', type: 'success', message: 'Konfigurasi PIC berhasil dihapus.');
         }
@@ -206,22 +210,39 @@ class PicConfigManager extends Component
 
     public function render()
     {
-        $departements = Departement::withCount('picConfigs')
-            ->with(['picConfigs.user'])
-            ->has('picConfigs')
-            ->when($this->search, fn ($q) => $q->where('name', 'like', "%{$this->search}%"))
-            ->orderBy($this->sortField, $this->sortDirection)
-            ->paginate($this->perPage);
+        // Get all PIC configs with relations
+        $configs = PicConfig::with(['departemen', 'jenisLaporan', 'user'])
+            ->when($this->search, function ($q) {
+                $q->whereHas('departemen', fn ($sq) => $sq->where('name', 'like', "%{$this->search}%"))
+                  ->orWhereHas('jenisLaporan', fn ($sq) => $sq->where('nama', 'like', "%{$this->search}%"));
+            })
+            ->orderBy('departemen_id')
+            ->orderBy('jenis_laporan_id')
+            ->get();
+
+        // Group by (departemen_id, jenis_laporan_id)
+        $grouped = $configs->groupBy(fn ($c) => $c->departemen_id . '-' . ($c->jenis_laporan_id ?? '0'));
+
+        // Manual pagination for grouped collection
+        $page = $this->getPage() ?: 1;
+        $perPage = $this->perPage;
+        $items = $grouped->forPage($page, $perPage);
+
+        $groups = new \Illuminate\Pagination\LengthAwarePaginator(
+            $items,
+            $grouped->count(),
+            $perPage,
+            $page,
+            ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath()]
+        );
 
         $departemen = $this->departemen_id ? Departement::find($this->departemen_id) : null;
 
         return view('livewire.admin.pic-config-manager', [
-            'departements' => $departements,
+            'groups' => $groups,
             'departemen' => $departemen,
-            'availableDepartements' => Departement::active()
-                ->whereDoesntHave('picConfigs')
-                ->orderBy('name')
-                ->get(),
+            'availableDepartements' => Departement::active()->orderBy('name')->get(),
+            'jenisLaporans' => JenisLaporan::active()->orderBy('nama')->get(),
             'users' => User::where('departemen_id', $this->departemen_id)
                 ->where('is_active', true)
                 ->orderBy('name')

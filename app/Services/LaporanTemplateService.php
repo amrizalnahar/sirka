@@ -44,7 +44,7 @@ class LaporanTemplateService
 
         // Header row
         foreach ($headers as $col => $header) {
-            $cell = $sheet->getCellByColumnAndRow($col + 1, 1);
+            $cell = $sheet->getCell([$col + 1, 1]);
             $cell->setValue($header);
             $cell->getStyle()->getFont()->setBold(true);
             $cell->getStyle()->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A6FAA');
@@ -70,12 +70,12 @@ class LaporanTemplateService
         ];
 
         foreach ($example as $col => $value) {
-            $sheet->setCellValueByColumnAndRow($col + 1, 2, $value);
+            $sheet->setCellValue([$col + 1, 2], $value);
         }
 
         // Auto width
         foreach (range(1, count($headers)) as $col) {
-            $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
+            $sheet->getColumnDimension(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col))->setAutoSize(true);
         }
 
         // Data validation for status_kegiatan

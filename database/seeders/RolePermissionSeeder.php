@@ -65,6 +65,11 @@ class RolePermissionSeeder extends Seeder
             'tags-list', 'tags-create', 'tags-edit', 'tags-delete',
             'departements-list', 'departements-create', 'departements-edit', 'departements-delete',
             'pic-configs-list', 'pic-configs-create', 'pic-configs-edit', 'pic-configs-delete',
+            'laporan-list', 'laporan-create', 'laporan-edit', 'laporan-delete', 'laporan-submit',
+            'jenis-laporan-list', 'jenis-laporan-create', 'jenis-laporan-edit', 'jenis-laporan-delete',
+            'master-akun-list', 'master-akun-create', 'master-akun-edit', 'master-akun-delete',
+            'master-kategori-list', 'master-kategori-create', 'master-kategori-edit', 'master-kategori-delete',
+            'approval-chain-list', 'approval-chain-create', 'approval-chain-edit', 'approval-chain-delete',
         ]);
 
         $viewer->givePermissionTo([

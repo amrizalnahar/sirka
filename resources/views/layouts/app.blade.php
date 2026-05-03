@@ -16,7 +16,7 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
-        @livewireStyles
+        @livewireScriptConfig
     </head>
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100">
@@ -36,7 +36,6 @@
                 {{ $slot }}
             </main>
         </div>
-        @livewireScripts
     <script>
         /* Scroll-to-error: otomatis scroll ke input yang gagal validasi */
         (function () {

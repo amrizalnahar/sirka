@@ -41,4 +41,9 @@ class Departement extends Model
     {
         return $this->hasMany(PicConfig::class, 'departemen_id');
     }
+
+    public function approvalChains()
+    {
+        return $this->hasMany(ApprovalChain::class, 'departemen_id');
+    }
 }

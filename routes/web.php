@@ -18,7 +18,13 @@ use App\Livewire\Admin\ScheduleTaskManager;
 use App\Livewire\Admin\ModerationWordManager;
 use App\Livewire\Admin\DepartementManager;
 use App\Livewire\Admin\PicConfigManager;
+use App\Livewire\Admin\JenisLaporanManager;
+use App\Livewire\Admin\MasterAkunManager;
+use App\Livewire\Admin\MasterKategoriManager;
+use App\Livewire\Admin\ApprovalChainManager;
 use App\Livewire\Laporan\LaporanImport;
+use App\Livewire\Laporan\LaporanTable;
+use App\Livewire\Laporan\LaporanDetail;
 use App\Services\LaporanTemplateService;
 use App\Http\Controllers\Auth\PublicKeyController;
 use App\Http\Controllers\Public\BeritaController;
@@ -89,32 +95,35 @@ Route::middleware(['auth'])
             ->name('konfigurasi-pic');
 
         // Laporan
-        Route::get('/laporan', function () {
-            return redirect()->route('admin.laporan.import');
-        })->middleware('permission:laporan-list')->name('laporan');
+        Route::get('/laporan', LaporanTable::class)
+            ->middleware('permission:laporan-list')
+            ->name('laporan');
         Route::get('/laporan/import', LaporanImport::class)
             ->middleware('permission:laporan-create')
             ->name('laporan.import');
         Route::get('/laporan/template', function () {
             return (new LaporanTemplateService())->download();
         })->middleware('permission:laporan-create')->name('laporan.template');
-        Route::get('/laporan/approval-queue', function () {
-            return redirect()->route('admin.dashboard');
-        })->middleware('permission:laporan-approve')->name('laporan.approval-queue');
+        Route::get('/laporan/approval-queue', LaporanTable::class)
+            ->middleware('permission:laporan-approve')
+            ->name('laporan.approval-queue');
+        Route::get('/laporan/{laporan}', LaporanDetail::class)
+            ->middleware('permission:laporan-list')
+            ->name('laporan.detail');
 
-        // Master Data Laporan (placeholders — akan diimplementasi di Phase 2)
-        Route::get('/jenis-laporan', function () {
-            return redirect()->route('admin.dashboard');
-        })->middleware('permission:jenis-laporan-list')->name('jenis-laporan');
-        Route::get('/master-akun', function () {
-            return redirect()->route('admin.dashboard');
-        })->middleware('permission:master-akun-list')->name('master-akun');
-        Route::get('/master-kategori', function () {
-            return redirect()->route('admin.dashboard');
-        })->middleware('permission:master-kategori-list')->name('master-kategori');
-        Route::get('/approval-chain', function () {
-            return redirect()->route('admin.dashboard');
-        })->middleware('permission:approval-chain-list')->name('approval-chain');
+        // Master Data Laporan
+        Route::get('/jenis-laporan', JenisLaporanManager::class)
+            ->middleware('permission:jenis-laporan-list')
+            ->name('jenis-laporan');
+        Route::get('/master-akun', MasterAkunManager::class)
+            ->middleware('permission:master-akun-list')
+            ->name('master-akun');
+        Route::get('/master-kategori', MasterKategoriManager::class)
+            ->middleware('permission:master-kategori-list')
+            ->name('master-kategori');
+        Route::get('/approval-chain', ApprovalChainManager::class)
+            ->middleware('permission:approval-chain-list')
+            ->name('approval-chain');
 
         Route::get('/berita', BeritaTable::class)
             ->middleware('permission:posts-list')

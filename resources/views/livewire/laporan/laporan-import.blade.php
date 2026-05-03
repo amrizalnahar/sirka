@@ -82,10 +82,19 @@
                               file:bg-[#1A6FAA] file:text-white
                               hover:file:bg-[#155a8a]
                               cursor-pointer">
+                <div class="mt-1.5 flex items-center gap-2 text-xs text-gray-500">
+                    <span wire:loading wire:target="file">
+                        <svg class="animate-spin h-3.5 w-3.5 text-[#1A6FAA]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                    </span>
+                    <span wire:loading wire:target="file">Mengunggah file...</span>
+                </div>
                 @error('file') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
             </div>
-            <button type="button" wire:click="parseFile" wire:loading.attr="disabled"
-                    class="px-4 py-2 bg-[#1A6FAA] text-white text-sm font-medium rounded-lg hover:bg-[#155a8a] transition-colors disabled:opacity-50">
+            <button type="button" wire:click="parseFile"
+                    @disabled(!$file || $errors->has('file'))
+                    wire:loading.attr="disabled"
+                    wire:target="parseFile"
+                    class="px-4 py-2 bg-[#1A6FAA] text-white text-sm font-medium rounded-lg hover:bg-[#155a8a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 <span wire:loading.remove wire:target="parseFile">Preview Data</span>
                 <span wire:loading wire:target="parseFile">Memproses...</span>
             </button>
@@ -116,13 +125,57 @@
                 </div>
             </div>
 
-            @if($hasErrors)
-                <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p class="text-sm text-red-700">Perbaiki {{ $summary['errors'] }} error sebelum melanjutkan.</p>
+            {{-- Detailed Error / Warning Breakdown --}}
+            @php
+                $errorRows = collect($preview)->filter(fn($r) => $r['status'] === 'error');
+                $warningRows = collect($preview)->filter(fn($r) => $r['status'] === 'warning');
+            @endphp
+
+            @if($errorRows->isNotEmpty())
+                <div class="mb-4 border border-red-200 rounded-lg overflow-hidden">
+                    <div class="bg-red-50 px-4 py-2.5 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span class="text-sm font-semibold text-red-700">{{ $summary['errors'] }} baris memiliki error — perbaiki sebelum menyimpan</span>
+                    </div>
+                    <div class="bg-white divide-y divide-red-100 max-h-64 overflow-y-auto">
+                        @foreach($errorRows as $row)
+                            @foreach($row['errors'] as $field => $message)
+                                <div class="px-4 py-2 flex items-start gap-3 text-sm">
+                                    <span class="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-100 text-red-700 text-xs font-bold">{{ $row['row_num'] }}</span>
+                                    <div class="flex-1">
+                                        <span class="font-medium text-gray-700">{{ ucfirst(str_replace('_', ' ', $field)) }}</span>
+                                        <span class="text-red-600">{{ $message }}</span>
+                                    </div>
+                                </div>
+                            @endforeach
+                        @endforeach
+                    </div>
                 </div>
-            @elseif($summary['warnings'] > 0)
-                <div class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p class="text-sm text-yellow-700">Terdapat {{ $summary['warnings'] }} warning. Anda tetap dapat menyimpan data.</p>
+            @endif
+
+            @if($warningRows->isNotEmpty())
+                <div class="mb-4 border border-yellow-200 rounded-lg overflow-hidden">
+                    <div class="bg-yellow-50 px-4 py-2.5 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        <span class="text-sm font-semibold text-yellow-700">{{ $summary['warnings'] }} baris memiliki warning — bisa disimpan</span>
+                    </div>
+                    <div class="bg-white divide-y divide-yellow-100 max-h-48 overflow-y-auto">
+                        @foreach($warningRows as $row)
+                            @foreach($row['warnings'] as $field => $message)
+                                <div class="px-4 py-2 flex items-start gap-3 text-sm">
+                                    <span class="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-yellow-100 text-yellow-700 text-xs font-bold">{{ $row['row_num'] }}</span>
+                                    <div class="flex-1">
+                                        <span class="font-medium text-gray-700">{{ ucfirst(str_replace('_', ' ', $field)) }}</span>
+                                        <span class="text-yellow-700">{{ $message }}</span>
+                                    </div>
+                                </div>
+                            @endforeach
+                        @endforeach
+                    </div>
                 </div>
             @endif
 

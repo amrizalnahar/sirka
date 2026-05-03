@@ -36,6 +36,11 @@ class LaporanImport extends Component
         $this->periode_tahun = (int) now()->format('Y');
     }
 
+    public function updatedFile(): void
+    {
+        $this->dispatch('notify', type: 'success', message: 'File berhasil diunggah. Klik Preview Data untuk melanjutkan.');
+    }
+
     public function parseFile(): void
     {
         $this->validate([
